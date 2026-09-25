@@ -1,0 +1,95 @@
+exe@central@Lk
+
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  name      String
+  role      String   @default("user") // admin, user
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // "final-year" or "industry"
+  projectType String   // "group" or "individual"
+  description String?
+  clientName  String
+  companyName String?
+  country     String   @default("Sri Lanka")
+  totalAmount Decimal  @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  members  ProjectMember[]
+  invoices Invoice[]
+}
+
+model ProjectMember {
+  id      String @id @default(cuid())
+  name    String
+  contact String
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Invoice {
+  id          String   @id @default(cuid())
+  invoiceNo   String   @unique
+  proposalNo  String?
+  invoiceDate DateTime
+  dueDate     DateTime
+  currency    String   @default("LKR")
+  subtotal    Decimal  @default(0)
+  discount    Decimal  @default(0)
+  tax         Decimal  @default(0)
+  total       Decimal  @default(0)
+  status      String   @default("draft") // draft, generated, paid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  items InvoiceItem[]
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  type        String   // "advance" or "milestone"
+  description String
+  status      String   @default("pending") // pending, paid, overdue
+  taxes       String?
+  date        DateTime
+  amount      Decimal
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}

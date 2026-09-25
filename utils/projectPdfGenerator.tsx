@@ -1,307 +1,307 @@
-'use client';
+// 'use client';
 
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+// import jsPDF from 'jspdf';
+// import html2canvas from 'html2canvas';
 
-interface ProjectMember {
-  name: string;
-  contact: string;
-}
+// interface ProjectMember {
+//   name: string;
+//   contact: string;
+// }
 
-interface InvoiceItem {
-  type: 'advance' | 'milestone';
-  description: string;
-  status: string;
-  taxes: string | null;
-  date: string;
-  amount: number;
-}
+// interface InvoiceItem {
+//   type: 'advance' | 'milestone';
+//   description: string;
+//   status: string;
+//   taxes: string | null;
+//   date: string;
+//   amount: number;
+// }
 
-interface ProjectInvoiceData {
-  project: {
-    name: string;
-    type: string;
-    projectType: string;
-    clientName: string;
-    companyName: string;
-    country: string;
-    members: ProjectMember[];
-  };
-  invoice: {
-    proposalNo: string;
-    invoiceNo: string;
-    invoiceDate: string;
-    dueDate: string;
-    currency: string;
-    subtotal: string;
-    total: string;
-    items: InvoiceItem[];
-  };
-}
+// interface ProjectInvoiceData {
+//   project: {
+//     name: string;
+//     type: string;
+//     projectType: string;
+//     clientName: string;
+//     companyName: string;
+//     country: string;
+//     members: ProjectMember[];
+//   };
+//   invoice: {
+//     proposalNo: string;
+//     invoiceNo: string;
+//     invoiceDate: string;
+//     dueDate: string;
+//     currency: string;
+//     subtotal: string;
+//     total: string;
+//     items: InvoiceItem[];
+//   };
+// }
 
-export function generateProjectInvoicePDF(data: ProjectInvoiceData) {
-  // Create a temporary container for the invoice
-  const invoiceContainer = document.createElement('div');
-  invoiceContainer.style.position = 'absolute';
-  invoiceContainer.style.left = '-9999px';
-  invoiceContainer.style.width = '210mm'; // A4 width
-  invoiceContainer.style.padding = '0';
-  invoiceContainer.style.fontFamily = 'Arial, sans-serif';
-  invoiceContainer.style.backgroundColor = '#ffffff';
-  invoiceContainer.innerHTML = generateProjectInvoiceHTML(data);
+// export function generateProjectInvoicePDF(data: ProjectInvoiceData) {
+//   // Create a temporary container for the invoice
+//   const invoiceContainer = document.createElement('div');
+//   invoiceContainer.style.position = 'absolute';
+//   invoiceContainer.style.left = '-9999px';
+//   invoiceContainer.style.width = '210mm'; // A4 width
+//   invoiceContainer.style.padding = '0';
+//   invoiceContainer.style.fontFamily = 'Arial, sans-serif';
+//   invoiceContainer.style.backgroundColor = '#ffffff';
+//   invoiceContainer.innerHTML = generateProjectInvoiceHTML(data);
   
-  document.body.appendChild(invoiceContainer);
+//   document.body.appendChild(invoiceContainer);
 
-  // Wait for images to load
-  setTimeout(() => {
-    html2canvas(invoiceContainer, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-    }).then((canvas) => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
+//   // Wait for images to load
+//   setTimeout(() => {
+//     html2canvas(invoiceContainer, {
+//       scale: 2,
+//       useCORS: true,
+//       logging: false,
+//       backgroundColor: '#ffffff',
+//     }).then((canvas) => {
+//       const imgData = canvas.toDataURL('image/png');
+//       const pdf = new jsPDF('p', 'mm', 'a4');
       
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
+//       const imgWidth = 210;
+//       const pageHeight = 297;
+//       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+//       let heightLeft = imgHeight;
+//       let position = 0;
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+//       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+//       heightLeft -= pageHeight;
 
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
+//       while (heightLeft > 0) {
+//         position = heightLeft - imgHeight;
+//         pdf.addPage();
+//         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+//         heightLeft -= pageHeight;
+//       }
 
-      pdf.save(`Invoice_${data.invoice.invoiceNo || 'INVOICE'}.pdf`);
-      document.body.removeChild(invoiceContainer);
-    });
-  }, 500);
-}
+//       pdf.save(`Invoice_${data.invoice.invoiceNo || 'INVOICE'}.pdf`);
+//       document.body.removeChild(invoiceContainer);
+//     });
+//   }, 500);
+// }
 
-function generateProjectInvoiceHTML(data: ProjectInvoiceData): string {
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = String(date.getFullYear()).slice(-2);
-    return `${day}/${month}/${year}`;
-  };
+// function generateProjectInvoiceHTML(data: ProjectInvoiceData): string {
+//   const formatDate = (dateString: string) => {
+//     if (!dateString) return '';
+//     const date = new Date(dateString);
+//     const day = String(date.getDate()).padStart(2, '0');
+//     const month = String(date.getMonth() + 1).padStart(2, '0');
+//     const year = String(date.getFullYear()).slice(-2);
+//     return `${day}/${month}/${year}`;
+//   };
 
-  const formatDateFull = (dateString: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = String(date.getFullYear());
-    return `${day}/${month}/${year}`;
-  };
+//   const formatDateFull = (dateString: string) => {
+//     if (!dateString) return '';
+//     const date = new Date(dateString);
+//     const day = String(date.getDate()).padStart(2, '0');
+//     const month = String(date.getMonth() + 1).padStart(2, '0');
+//     const year = String(date.getFullYear());
+//     return `${day}/${month}/${year}`;
+//   };
 
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    if (isNaN(num)) return '0.00';
-    const parts = num.toFixed(2).split('.');
-    const integerPart = parts[0];
-    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    return `${formattedInteger}.${parts[1]}`;
-  };
+//   const formatCurrency = (amount: string | number) => {
+//     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+//     if (isNaN(num)) return '0.00';
+//     const parts = num.toFixed(2).split('.');
+//     const integerPart = parts[0];
+//     const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+//     return `${formattedInteger}.${parts[1]}`;
+//   };
 
-  // Generate member information for group projects
-  const memberInfo = data.project.projectType === 'group' && data.project.members.length > 0
-    ? `
-      <div style="margin-bottom: 12px;">
-        <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Group Members:</div>
-        <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 12px; min-height: 18px; line-height: 1.6;">
-          ${data.project.members.map((member, idx) => 
-            `${idx + 1}. ${member.name} (${member.contact})`
-          ).join('<br>')}
-        </div>
-      </div>
-    `
-    : '';
+//   // Generate member information for group projects
+//   const memberInfo = data.project.projectType === 'group' && data.project.members.length > 0
+//     ? `
+//       <div style="margin-bottom: 12px;">
+//         <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Group Members:</div>
+//         <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 12px; min-height: 18px; line-height: 1.6;">
+//           ${data.project.members.map((member, idx) => 
+//             `${idx + 1}. ${member.name} (${member.contact})`
+//           ).join('<br>')}
+//         </div>
+//       </div>
+//     `
+//     : '';
 
-  return `
-    <div style="position: relative; width: 100%; background: white; font-family: Arial, sans-serif; padding: 0; margin: 0; box-sizing: border-box;">
-      <!-- Header with Blue/Green Background -->
-      <div style="background: linear-gradient(to right, #2563eb, #16a34a); padding: 25px 30px; margin-bottom: 0;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <div>
-            <div style="font-size: 42px; font-weight: bold; color: white; margin-bottom: 5px; letter-spacing: 1px;">
-              EXΞ.lk
-            </div>
-            <div style="color: rgba(255, 255, 255, 0.95); font-size: 13px; margin-top: 3px; font-style: italic;">
-              Make your idea executable.
-            </div>
-          </div>
-          <div style="text-align: right; font-size: 11px; color: white; line-height: 1.8;">
-            <div style="margin-bottom: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
-              <span style="color: #9333ea; font-size: 16px; font-weight: bold;">🖥</span>
-              <span>www.exe.lk</span>
-            </div>
-            <div style="margin-bottom: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
-              <span style="color: #9333ea; font-size: 16px; font-weight: bold;">✉</span>
-              <span>hello@exe.lk</span>
-            </div>
-            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
-              <span style="color: #9333ea; font-size: 16px; font-weight: bold;">📞</span>
-              <span>+94 70 274 9876 / +94 76 682 8306</span>
-            </div>
-          </div>
-        </div>
-      </div>
+//   return `
+//     <div style="position: relative; width: 100%; background: white; font-family: Arial, sans-serif; padding: 0; margin: 0; box-sizing: border-box;">
+//       <!-- Header with Blue/Green Background -->
+//       <div style="background: linear-gradient(to right, #2563eb, #16a34a); padding: 25px 30px; margin-bottom: 0;">
+//         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+//           <div>
+//             <div style="font-size: 42px; font-weight: bold; color: white; margin-bottom: 5px; letter-spacing: 1px;">
+//               EXΞ.lk
+//             </div>
+//             <div style="color: rgba(255, 255, 255, 0.95); font-size: 13px; margin-top: 3px; font-style: italic;">
+//               Make your idea executable.
+//             </div>
+//           </div>
+//           <div style="text-align: right; font-size: 11px; color: white; line-height: 1.8;">
+//             <div style="margin-bottom: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+//               <span style="color: #9333ea; font-size: 16px; font-weight: bold;">🖥</span>
+//               <span>www.exe.lk</span>
+//             </div>
+//             <div style="margin-bottom: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+//               <span style="color: #9333ea; font-size: 16px; font-weight: bold;">✉</span>
+//               <span>hello@exe.lk</span>
+//             </div>
+//             <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+//               <span style="color: #9333ea; font-size: 16px; font-weight: bold;">📞</span>
+//               <span>+94 70 274 9876 / +94 76 682 8306</span>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
 
-      <!-- Title -->
-      <div style="text-align: center; font-size: 22px; font-weight: bold; margin: 25px 0; color: #1f2937; letter-spacing: 1px;">
-        PAYMENT INVOICE
-      </div>
+//       <!-- Title -->
+//       <div style="text-align: center; font-size: 22px; font-weight: bold; margin: 25px 0; color: #1f2937; letter-spacing: 1px;">
+//         PAYMENT INVOICE
+//       </div>
 
-      <!-- Project Type Badge -->
-      <div style="text-align: center; margin-bottom: 20px;">
-        <span style="background: ${data.project.type === 'final-year' ? '#dbeafe' : '#d1fae5'}; color: ${data.project.type === 'final-year' ? '#1e40af' : '#047857'}; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: bold;">
-          ${data.project.type === 'final-year' ? 'FINAL YEAR PROJECT' : 'INDUSTRY PROJECT'} - ${data.project.projectType === 'group' ? 'GROUP' : 'INDIVIDUAL'}
-        </span>
-      </div>
+//       <!-- Project Type Badge -->
+//       <div style="text-align: center; margin-bottom: 20px;">
+//         <span style="background: ${data.project.type === 'final-year' ? '#dbeafe' : '#d1fae5'}; color: ${data.project.type === 'final-year' ? '#1e40af' : '#047857'}; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: bold;">
+//           ${data.project.type === 'final-year' ? 'FINAL YEAR PROJECT' : 'INDUSTRY PROJECT'} - ${data.project.projectType === 'group' ? 'GROUP' : 'INDIVIDUAL'}
+//         </span>
+//       </div>
 
-      <!-- Client & Invoice Details -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin: 0 30px 25px 30px;">
-        <div>
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Client Name:</div>
-            <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.project.clientName || ''}</div>
-          </div>
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Project Name:</div>
-            <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.project.name || ''}</div>
-          </div>
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Company Name:</div>
-            <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.project.companyName || ''}</div>
-          </div>
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Country:</div>
-            <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.project.country || 'Sri Lanka'}</div>
-          </div>
-          ${memberInfo}
-          <div>
-            <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Proposal No:</div>
-            <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.invoice.proposalNo || ''}</div>
-          </div>
-        </div>
-        <div>
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Cost Estimation:</div>
-            <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.invoice.proposalNo || ''}</div>
-          </div>
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Invoice No:</div>
-            <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.invoice.invoiceNo || ''}</div>
-          </div>
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Invoice Date:</div>
-            <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${formatDate(data.invoice.invoiceDate)}</div>
-          </div>
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Due Date:</div>
-            <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${formatDate(data.invoice.dueDate)}</div>
-          </div>
-          <div>
-            <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Currency:</div>
-            <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.invoice.currency || 'LKR'}</div>
-          </div>
-        </div>
-      </div>
+//       <!-- Client & Invoice Details -->
+//       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin: 0 30px 25px 30px;">
+//         <div>
+//           <div style="margin-bottom: 12px;">
+//             <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Client Name:</div>
+//             <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.project.clientName || ''}</div>
+//           </div>
+//           <div style="margin-bottom: 12px;">
+//             <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Project Name:</div>
+//             <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.project.name || ''}</div>
+//           </div>
+//           <div style="margin-bottom: 12px;">
+//             <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Company Name:</div>
+//             <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.project.companyName || ''}</div>
+//           </div>
+//           <div style="margin-bottom: 12px;">
+//             <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Country:</div>
+//             <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.project.country || 'Sri Lanka'}</div>
+//           </div>
+//           ${memberInfo}
+//           <div>
+//             <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Proposal No:</div>
+//             <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.invoice.proposalNo || ''}</div>
+//           </div>
+//         </div>
+//         <div>
+//           <div style="margin-bottom: 12px;">
+//             <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Cost Estimation:</div>
+//             <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.invoice.proposalNo || ''}</div>
+//           </div>
+//           <div style="margin-bottom: 12px;">
+//             <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Invoice No:</div>
+//             <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.invoice.invoiceNo || ''}</div>
+//           </div>
+//           <div style="margin-bottom: 12px;">
+//             <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Invoice Date:</div>
+//             <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${formatDate(data.invoice.invoiceDate)}</div>
+//           </div>
+//           <div style="margin-bottom: 12px;">
+//             <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Due Date:</div>
+//             <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${formatDate(data.invoice.dueDate)}</div>
+//           </div>
+//           <div>
+//             <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #374151;">Currency:</div>
+//             <div style="border-bottom: 1px dashed #9ca3af; padding-bottom: 3px; font-size: 13px; min-height: 18px;">${data.invoice.currency || 'LKR'}</div>
+//           </div>
+//         </div>
+//       </div>
 
-      <!-- Payment Breakdown Table -->
-      <div style="margin: 0 30px 25px 30px;">
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid #d1d5db;">
-          <thead>
-            <tr style="background-color: #f3f4f6;">
-              <th style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: left; font-weight: bold; font-size: 12px; color: #374151;">Type</th>
-              <th style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: left; font-weight: bold; font-size: 12px; color: #374151;">Description</th>
-              <th style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: left; font-weight: bold; font-size: 12px; color: #374151;">Status</th>
-              <th style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: left; font-weight: bold; font-size: 12px; color: #374151;">Taxes</th>
-              <th style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: left; font-weight: bold; font-size: 12px; color: #374151;">Date</th>
-              <th style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: right; font-weight: bold; font-size: 12px; color: #374151;">Amount (LKR)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.invoice.items.map(item => `
-              <tr>
-                <td style="border: 1px solid #d1d5db; padding: 10px 12px; font-size: 12px; color: #374151;">
-                  <span style="background: ${item.type === 'advance' ? '#f3e8ff' : '#dbeafe'}; color: ${item.type === 'advance' ? '#7c3aed' : '#1e40af'}; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold;">
-                    ${item.type === 'advance' ? 'ADVANCE' : 'MILESTONE'}
-                  </span>
-                </td>
-                <td style="border: 1px solid #d1d5db; padding: 10px 12px; font-size: 12px; color: #374151;">${item.description || ''}</td>
-                <td style="border: 1px solid #d1d5db; padding: 10px 12px; font-size: 12px; color: #374151;">${item.status || ''}</td>
-                <td style="border: 1px solid #d1d5db; padding: 10px 12px; font-size: 12px; color: #374151;">${item.taxes || 'N/A'}</td>
-                <td style="border: 1px solid #d1d5db; padding: 10px 12px; font-size: 12px; color: #374151;">${formatDateFull(item.date)}</td>
-                <td style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: right; font-size: 12px; color: #374151;">${formatCurrency(item.amount)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
+//       <!-- Payment Breakdown Table -->
+//       <div style="margin: 0 30px 25px 30px;">
+//         <table style="width: 100%; border-collapse: collapse; border: 1px solid #d1d5db;">
+//           <thead>
+//             <tr style="background-color: #f3f4f6;">
+//               <th style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: left; font-weight: bold; font-size: 12px; color: #374151;">Type</th>
+//               <th style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: left; font-weight: bold; font-size: 12px; color: #374151;">Description</th>
+//               <th style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: left; font-weight: bold; font-size: 12px; color: #374151;">Status</th>
+//               <th style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: left; font-weight: bold; font-size: 12px; color: #374151;">Taxes</th>
+//               <th style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: left; font-weight: bold; font-size: 12px; color: #374151;">Date</th>
+//               <th style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: right; font-weight: bold; font-size: 12px; color: #374151;">Amount (LKR)</th>
+//             </tr>
+//           </thead>
+//           <tbody>
+//             ${data.invoice.items.map(item => `
+//               <tr>
+//                 <td style="border: 1px solid #d1d5db; padding: 10px 12px; font-size: 12px; color: #374151;">
+//                   <span style="background: ${item.type === 'advance' ? '#f3e8ff' : '#dbeafe'}; color: ${item.type === 'advance' ? '#7c3aed' : '#1e40af'}; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold;">
+//                     ${item.type === 'advance' ? 'ADVANCE' : 'MILESTONE'}
+//                   </span>
+//                 </td>
+//                 <td style="border: 1px solid #d1d5db; padding: 10px 12px; font-size: 12px; color: #374151;">${item.description || ''}</td>
+//                 <td style="border: 1px solid #d1d5db; padding: 10px 12px; font-size: 12px; color: #374151;">${item.status || ''}</td>
+//                 <td style="border: 1px solid #d1d5db; padding: 10px 12px; font-size: 12px; color: #374151;">${item.taxes || 'N/A'}</td>
+//                 <td style="border: 1px solid #d1d5db; padding: 10px 12px; font-size: 12px; color: #374151;">${formatDateFull(item.date)}</td>
+//                 <td style="border: 1px solid #d1d5db; padding: 10px 12px; text-align: right; font-size: 12px; color: #374151;">${formatCurrency(item.amount)}</td>
+//               </tr>
+//             `).join('')}
+//           </tbody>
+//         </table>
+//       </div>
 
-      <!-- Bank Details and Summary -->
-      <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 25px; margin: 0 30px 25px 30px;">
-        <!-- Bank Details Box -->
-        <div style="border: 1px solid #d1d5db; padding: 15px; background: #ffffff;">
-          <div style="font-weight: bold; margin-bottom: 12px; font-size: 14px; color: #1f2937;">Bank Details</div>
-          <div style="font-size: 12px; line-height: 1.9; color: #374151;">
-            <div><strong>Account No:</strong> 1000661376</div>
-            <div><strong>Name:</strong> EXE LK (PVT) LTD</div>
-            <div><strong>Swift Code:</strong> CCEYLKLX</div>
-            <div><strong>Bank:</strong> Commercial Bank</div>
-            <div><strong>Branch Name:</strong> Homagama</div>
-            <div><strong>Address:</strong> 289/9A, 5th Lane, Kulasiri Kumarage Mawatha, Katuwana, Homagama.</div>
-            <div><strong>Country:</strong> Sri Lanka</div>
-          </div>
-        </div>
+//       <!-- Bank Details and Summary -->
+//       <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 25px; margin: 0 30px 25px 30px;">
+//         <!-- Bank Details Box -->
+//         <div style="border: 1px solid #d1d5db; padding: 15px; background: #ffffff;">
+//           <div style="font-weight: bold; margin-bottom: 12px; font-size: 14px; color: #1f2937;">Bank Details</div>
+//           <div style="font-size: 12px; line-height: 1.9; color: #374151;">
+//             <div><strong>Account No:</strong> 1000661376</div>
+//             <div><strong>Name:</strong> EXE LK (PVT) LTD</div>
+//             <div><strong>Swift Code:</strong> CCEYLKLX</div>
+//             <div><strong>Bank:</strong> Commercial Bank</div>
+//             <div><strong>Branch Name:</strong> Homagama</div>
+//             <div><strong>Address:</strong> 289/9A, 5th Lane, Kulasiri Kumarage Mawatha, Katuwana, Homagama.</div>
+//             <div><strong>Country:</strong> Sri Lanka</div>
+//           </div>
+//         </div>
         
-        <!-- Payment Summary -->
-        <div>
-          <table style="width: 100%; border-collapse: collapse; border: 1px solid #d1d5db; margin-bottom: 15px;">
-            <tr>
-              <td style="border: 1px solid #d1d5db; padding: 8px 10px; font-weight: bold; font-size: 12px; color: #374151;">SUBTOTAL (LKR)</td>
-              <td style="border: 1px solid #d1d5db; padding: 8px 10px; text-align: right; font-size: 12px; color: #374151;">${formatCurrency(data.invoice.subtotal)}</td>
-            </tr>
-            <tr style="background-color: #f3f4f6;">
-              <td style="border: 1px solid #d1d5db; padding: 8px 10px; font-weight: bold; font-size: 12px; color: #374151;">TOTAL (LKR)</td>
-              <td style="border: 1px solid #d1d5db; padding: 8px 10px; text-align: right; font-weight: bold; font-size: 12px; color: #374151;">${formatCurrency(data.invoice.total)}</td>
-            </tr>
-          </table>
-          <div style="font-size: 16px; color: #2563eb; font-weight: bold; line-height: 1.5;">
-            This invoice is payment for<br>
-            <span style="font-size: 20px;">${formatCurrency(data.invoice.total)} LKR</span>
-          </div>
-        </div>
-      </div>
+//         <!-- Payment Summary -->
+//         <div>
+//           <table style="width: 100%; border-collapse: collapse; border: 1px solid #d1d5db; margin-bottom: 15px;">
+//             <tr>
+//               <td style="border: 1px solid #d1d5db; padding: 8px 10px; font-weight: bold; font-size: 12px; color: #374151;">SUBTOTAL (LKR)</td>
+//               <td style="border: 1px solid #d1d5db; padding: 8px 10px; text-align: right; font-size: 12px; color: #374151;">${formatCurrency(data.invoice.subtotal)}</td>
+//             </tr>
+//             <tr style="background-color: #f3f4f6;">
+//               <td style="border: 1px solid #d1d5db; padding: 8px 10px; font-weight: bold; font-size: 12px; color: #374151;">TOTAL (LKR)</td>
+//               <td style="border: 1px solid #d1d5db; padding: 8px 10px; text-align: right; font-weight: bold; font-size: 12px; color: #374151;">${formatCurrency(data.invoice.total)}</td>
+//             </tr>
+//           </table>
+//           <div style="font-size: 16px; color: #2563eb; font-weight: bold; line-height: 1.5;">
+//             This invoice is payment for<br>
+//             <span style="font-size: 20px;">${formatCurrency(data.invoice.total)} LKR</span>
+//           </div>
+//         </div>
+//       </div>
 
-      <!-- Comments Box -->
-      <div style="margin: 0 30px 25px 30px; border: 1px solid #d1d5db; padding: 15px; background: #ffffff;">
-        <div style="font-weight: bold; margin-bottom: 10px; font-size: 14px; color: #1f2937;">Comments or Special Instructions</div>
-        <div style="font-size: 11px; line-height: 1.7; color: #374151;">
-          <div style="margin-bottom: 8px;">
-            <strong>Important Note:</strong> Please do not forget to mention your Invoice number as the reference when you are depositing at the bank counter or the deposit machine since your payment is traced via the invoice number. Further, you are requested to email us a copy of the deposit slip or the screenshot of the online transfer / CEFT Transfer to finance@exe.lk on the payment date itself. (Please mention the Invoice Number in the Description).
-          </div>
-          <div>To avoid extending the payment duration, please pay before the due date.</div>
-        </div>
-      </div>
+//       <!-- Comments Box -->
+//       <div style="margin: 0 30px 25px 30px; border: 1px solid #d1d5db; padding: 15px; background: #ffffff;">
+//         <div style="font-weight: bold; margin-bottom: 10px; font-size: 14px; color: #1f2937;">Comments or Special Instructions</div>
+//         <div style="font-size: 11px; line-height: 1.7; color: #374151;">
+//           <div style="margin-bottom: 8px;">
+//             <strong>Important Note:</strong> Please do not forget to mention your Invoice number as the reference when you are depositing at the bank counter or the deposit machine since your payment is traced via the invoice number. Further, you are requested to email us a copy of the deposit slip or the screenshot of the online transfer / CEFT Transfer to finance@exe.lk on the payment date itself. (Please mention the Invoice Number in the Description).
+//           </div>
+//           <div>To avoid extending the payment duration, please pay before the due date.</div>
+//         </div>
+//       </div>
 
-      <!-- Footer with Blue/Green Background -->
-      <div style="background: linear-gradient(to right, #2563eb, #16a34a); padding: 25px 30px; margin-top: 20px;">
-        <div style="color: rgba(255, 255, 255, 0.9); font-size: 10px; text-align: center;">
-          &nbsp;
-        </div>
-      </div>
-    </div>
-  `;
-}
+//       <!-- Footer with Blue/Green Background -->
+//       <div style="background: linear-gradient(to right, #2563eb, #16a34a); padding: 25px 30px; margin-top: 20px;">
+//         <div style="color: rgba(255, 255, 255, 0.9); font-size: 10px; text-align: center;">
+//           &nbsp;
+//         </div>
+//       </div>
+//     </div>
+//   `;
+// }

@@ -1,33 +1,31 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import Sidebar from '@/components/layout/Sidebar';
+import TopHeader from '@/components/layout/TopHeader';
+import { ThemeProvider } from '@/components/theme-provider';
+import './globals.css';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "EXE.LK Invoice Generator",
-  description: "Make your idea executable - Invoice Generator",
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+    // suppressHydrationWarning is required on the html tag when using next-themes
+    <html lang="en" suppressHydrationWarning>
+      <body className="flex h-screen w-full overflow-hidden bg-[#F8FAFC] dark:bg-[#0B0C0E] text-[#1F2933] dark:text-white transition-colors duration-200">
+        
+        <ThemeProvider 
+          attribute="class" 
+          defaultTheme="system" 
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Sidebar />
+          
+          <div className="flex-1 flex flex-col h-screen overflow-hidden">
+            <TopHeader />
+            
+            <main className="flex-1 overflow-y-auto p-8">
+              {children}
+            </main>
+          </div>
+        </ThemeProvider>
+        
       </body>
     </html>
   );

@@ -1,31 +1,21 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { type NextRequest } from 'next/server';
+import { updateSession } from '@/utils/supabase/middleware';
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  
-  // Check if the path requires authentication
-  const isProtectedRoute = pathname.startsWith('/dashboard');
-  const isAuthRoute = pathname === '/';
-  
-  const session = request.cookies.get('session');
-  const userId = request.cookies.get('userId');
-  
-  const isAuthenticated = session && userId;
-
-  // Redirect to login if trying to access protected route without auth
-  if (isProtectedRoute && !isAuthenticated) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  // Redirect to dashboard if already logged in and trying to access login page
-  if (isAuthRoute && isAuthenticated) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
-  return NextResponse.next();
+export async function middleware(request: NextRequest) {
+  // Delegate the session updating and route protection to the utility function
+  return await updateSession(request);
 }
 
+// Ensure the middleware runs on all paths except static assets and Next.js internals
 export const config = {
-  matcher: ['/', '/dashboard/:path*'],
+  matcher: [
+    /*
+     * Match all request paths except for:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - images/assets static extensions (svg, png, jpg, etc.)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 };

@@ -1,67 +1,95 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyCredentials, generateSessionToken } from '@/lib/auth';
+import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
-export async function POST(request: NextRequest) {
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Authenticate user with email and password
+ *     description: Signs in a user using Supabase Authentication and establishes a session cookie.
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: P@ssword123
+ *     responses:
+ *       200:
+ *         description: Successfully authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Login successful
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     email:
+ *                       type: string
+ *                 session:
+ *                   type: object
+ *       400:
+ *         description: Missing required fields (email or password)
+ *       401:
+ *         description: Invalid login credentials
+ *       500:
+ *         description: Internal server error
+ */
+export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { username, password } = body;
+    const { email, password } = body || {};
 
-    if (!username || !password) {
+    if (!email || !password) {
       return NextResponse.json(
-        { error: 'Username and password are required' },
+        { error: 'Email and password are required' },
         { status: 400 }
       );
     }
 
-    const user = await verifyCredentials(username, password);
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (!user) {
+    if (error) {
       return NextResponse.json(
-        { error: 'Invalid credentials' },
+        { error: error.message },
         { status: 401 }
       );
     }
 
-    // Create session token
-    const sessionToken = generateSessionToken();
-
-    const response = NextResponse.json(
+    return NextResponse.json(
       {
-        user: {
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          name: user.name,
-          role: user.role,
-        },
+        message: 'Login successful',
+        user: data.user,
+        session: data.session,
       },
       { status: 200 }
     );
-
-    // Set session cookie
-    response.cookies.set('session', sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
-    });
-
-    // Store user ID in a separate cookie for easy access
-    response.cookies.set('userId', user.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
-
-    return response;
-  } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json(
-      { error: 'An error occurred during login' },
-      { status: 500 }
-    );
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Internal server error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
