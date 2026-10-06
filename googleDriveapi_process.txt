@@ -1,0 +1,65 @@
+As the Lead Backend Engineer, I completely agree with this sequence. If we don't establish and test the Google Drive pipeline first, the Project Creation API will fail immediately when it tries to provision the project's root folder.
+
+Server-to-server Google Drive integration relies on a Service Account. This means your Next.js app will authenticate as a "bot" user, rather than forcing a human to click an OAuth login screen.
+
+Here is the exact, step-by-step process to set up the infrastructure and write the utility wrapper.
+
+Step 1: Configure Google Cloud Platform (GCP)
+Go to the Google Cloud Console.
+
+Create a new Project (e.g., "EXE Central Storage").
+
+In the left sidebar, navigate to APIs & Services > Library.
+
+Search for Google Drive API and click Enable.
+
+Step 2: Generate the Service Account Credentials
+Go to APIs & Services > Credentials.
+
+Click + Create Credentials at the top and select Service Account.
+
+Name it (e.g., "exe-central-backend") and click Create and Continue, then click Done (no specific role assignment is needed here).
+
+You will now see the Service Account in the list. Note its email address (e.g., exe-central-backend@your-project.iam.gserviceaccount.com).
+
+Click on the Service Account, go to the Keys tab.
+
+Click Add Key > Create new key, select JSON, and click Create.
+
+A JSON file will download to your computer. Open it in a text editor.
+
+Step 3: Configure the Master Drive Folder
+By default, files uploaded by a Service Account live in an isolated, invisible drive. To make them visible to EXE.lk staff, you must bridge the Service Account to a real Google Drive folder.
+
+Open your standard EXE.lk Google Drive in the browser.
+
+Create a new master folder (e.g., EXE_Central_Master_Storage).
+
+Right-click the folder and select Share.
+
+Paste the Service Account email address (from Step 2.4) into the share box.
+
+Set the permission to Editor and click Send.
+
+Look at the URL of this folder in your browser. It will look like this: [https://drive.google.com/drive/folders/1aBcD2eF3gH4iJ5kL6mN7oP8qR9sT0uV](https://drive.google.com/drive/folders/1aBcD2eF3gH4iJ5kL6mN7oP8qR9sT0uV).
+
+Copy that alphanumeric string (1aBcD...). This is your Master Folder ID.
+
+Step 4: Configure Next.js Environment Variables
+Open your Next.js .env.local file. You need to map the values from your downloaded JSON key and the Master Folder ID.
+
+Code snippet
+# Google Drive Service Account Configuration
+GOOGLE_CLIENT_EMAIL="your-service-account-email@your-project.iam.gserviceaccount.com"
+
+# IMPORTANT: Copy the exact string from the JSON, keeping the \n characters intact.
+# Wrap the entire string in quotes.
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBg...rest of key...\n-----END PRIVATE KEY-----\n"
+
+# The ID of the folder you created and shared in Step 3
+GOOGLE_DRIVE_ROOT_FOLDER_ID="1aBcD2eF3gH4iJ5kL6mN7oP8qR9sT0uV"
+Step 5: Install the Google API SDK
+Run this command in your project terminal:
+
+Bash
+npm install googleapis
