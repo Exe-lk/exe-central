@@ -189,45 +189,63 @@ export default function InvoiceManager({ project, onInvoiceCreated }: any) {
   };
 
   // 3. Live Data Calculation
-  const previewInvoiceData: any = useMemo(() => ({
-    id: 'preview',
-    invoiceNo: 'DRAFT-PREVIEW',
-    costEstimationNo: costEstimationNo || null,
-    proposalNo: proposalNo || null,
-    clientName: selectedParticipantData ? selectedParticipantData.name : project.clientName,
-    clientCompany: project.clientCompany,
-    country: project.country,
-    currency: 'LKR',
-    subtotal: subtotal,
-    discountAmount: discount,
-    taxAmount: tax,
-    totalAmount: totalDue,
-    paymentNote: paymentNote || null,
-    status: 'DRAFT',
-    issuedDate: new Date(),
-    dueDate: dueDate ? new Date(dueDate) : new Date(Date.now() + 14 * 86400000),
-    project: project,
-    participant: selectedParticipantData,
-    milestone: selectedMilestoneData,
-    additionalCosts: additionalCosts.map(c => ({ description: c.description || 'New Item', amount: parseFloat(c.amount) || 0 })),
-    billingHistory: [
-      ...activeInvoices.map((inv) => ({
-        description: inv.paymentNote || inv.milestone?.name || 'Invoice',
-        amount: Number(inv.subtotal ?? inv.totalAmount),
-        status: inv.status,
-        date: inv.issuedDate || inv.createdAt,
-      })),
-      {
-        description: isIndustrial ? paymentNote : selectedMilestoneData?.name,
-        amount: isIndustrial ? Number(manualSubtotal || 0) : subtotal,
-        status: 'PENDING',
-        date: new Date(),
-      },
-    ],
-  }), [
+  const previewInvoiceData: any = useMemo(() => {
+    const ledgerItems = activeInvoices.map((inv) => ({
+      description: inv.paymentNote || (inv.milestone ? `Milestone: ${inv.milestone.name}` : 'Advance Payment'),
+      amount: Number(inv.subtotal ?? inv.totalAmount),
+      status: inv.status,
+      date: inv.issuedDate || inv.createdAt,
+    }));
+
+    // Add current pending core item (Manual for Industrial, Milestone for Outsourcing)
+    ledgerItems.push({
+      description: isIndustrial ? (paymentNote || 'Advance Payment') : (selectedMilestoneData ? `Milestone: ${selectedMilestoneData.name}` : 'Advance Payment'),
+      amount: isIndustrial ? Number(manualSubtotal || 0) : baseAmount,
+      status: 'PENDING',
+      date: dueDate ? new Date(dueDate) : new Date(),
+    });
+
+    // Add current additional costs as separate pending line items (Outsourcing only)
+    if (!isIndustrial && additionalCosts && additionalCosts.length > 0) {
+      additionalCosts.forEach(cost => {
+        if (cost.description || parseFloat(cost.amount) > 0) {
+          ledgerItems.push({
+            description: cost.description || 'Additional Cost',
+            amount: parseFloat(cost.amount) || 0,
+            status: 'PENDING',
+            date: dueDate ? new Date(dueDate) : new Date(),
+          });
+        }
+      });
+    }
+
+    return {
+      id: 'preview',
+      invoiceNo: 'DRAFT-PREVIEW',
+      costEstimationNo: costEstimationNo || null,
+      proposalNo: proposalNo || null,
+      clientName: selectedParticipantData ? selectedParticipantData.name : project.clientName,
+      clientCompany: project.clientCompany,
+      country: project.country,
+      currency: 'LKR',
+      subtotal: subtotal,
+      discountAmount: discount,
+      taxAmount: tax,
+      totalAmount: totalDue,
+      paymentNote: paymentNote || null,
+      status: 'DRAFT',
+      issuedDate: new Date(),
+      dueDate: dueDate ? new Date(dueDate) : new Date(Date.now() + 14 * 86400000),
+      project: project,
+      participant: selectedParticipantData,
+      milestone: selectedMilestoneData,
+      additionalCosts: additionalCosts.map(c => ({ description: c.description || 'New Item', amount: parseFloat(c.amount) || 0 })),
+      billingHistory: ledgerItems,
+    };
+  }, [
     costEstimationNo, proposalNo, selectedParticipantData, project, subtotal, discount, tax,
     totalDue, paymentNote, dueDate, selectedMilestoneData, additionalCosts,
-    activeInvoices, isIndustrial, manualSubtotal,
+    activeInvoices, isIndustrial, manualSubtotal, baseAmount,
   ]);
 
   // 4. Debounced State (Only updates after user stops typing for 800ms)

@@ -1,9 +1,7 @@
-
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
-import { FiArchive, FiPlus, FiExternalLink, FiLoader, FiX, FiCheckCircle, FiAlertTriangle, FiTrash2, FiFilePlus,FiFileText } from 'react-icons/fi';
+import { FiArchive, FiPlus, FiLoader, FiX, FiCheckCircle, FiAlertTriangle, FiTrash2, FiFilePlus, FiFileText, FiDollarSign } from 'react-icons/fi';
 import dynamic from 'next/dynamic';
 import ReceiptTemplate from '@/components/pdf/ReceiptTemplate';
 
@@ -13,7 +11,7 @@ const PDFViewer = dynamic(
   { ssr: false, loading: () => <div className="flex items-center justify-center h-full text-gray-500"><FiLoader className="animate-spin w-8 h-8" /></div> }
 );
 
-// 2. 🌟 Anti-Blink PDF Engine: Memoized to block parent re-renders
+// 2. Anti-Blink PDF Engine: Memoized to block parent re-renders
 const MemoizedReceiptPreview = memo(({ receiptData }: { receiptData: any }) => {
   return (
     <PDFViewer width="100%" height="100%" className="border-none">
@@ -35,8 +33,14 @@ export default function ReceiptManager({ project }: any) {
 
   // Form State
   const [paymentId, setPaymentId] = useState<string>('');
-  const [description, setDescription] = useState<string>('');
-  const [additionalCosts, setAdditionalCosts] = useState<{id: number, description: string, amount: string}[]>([]);
+  const [issuedDate, setIssuedDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+
+  // Payment Details Section
+  const [receiptTitle, setReceiptTitle] = useState<string>('ADVANCE PAYMENT RECEIPT');
+  const [paymentStatusText, setPaymentStatusText] = useState<string>('ADVANCE PAYMENT RECEIVED');
+  const [paymentMethodOverride, setPaymentMethodOverride] = useState<string>('');
+  const [receiptDescription, setReceiptDescription] = useState<string>('');
+  const [additionalCosts, setAdditionalCosts] = useState<{ id: number; description: string; amount: string }[]>([]);
   
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -68,22 +72,43 @@ export default function ReceiptManager({ project }: any) {
 
   const selectedPayment = useMemo(() => pendingPayments.find(p => p.id === paymentId), [pendingPayments, paymentId]);
   const baseAmount = selectedPayment ? Number(selectedPayment.amount) : 0;
-  
+
+  const handlePaymentSelect = (id: string) => {
+    setPaymentId(id);
+    const targetPayment = pendingPayments.find((p: any) => p.id === id);
+    if (targetPayment) {
+      setReceiptDescription(targetPayment.invoice?.paymentNote || targetPayment.note || `Payment for Invoice ${targetPayment.invoice?.invoiceNo || ''}`);
+      setPaymentMethodOverride(targetPayment.method || 'Cash Deposit');
+    }
+  };
+
   const handleAddCost = () => setAdditionalCosts([...additionalCosts, { id: Date.now(), description: '', amount: '' }]);
   const handleRemoveCost = (id: number) => setAdditionalCosts(costs => costs.filter(c => c.id !== id));
   const handleCostChange = (id: number, field: string, value: string) => {
     setAdditionalCosts(costs => costs.map(c => c.id === id ? { ...c, [field]: value } : c));
   };
 
+  const resetForm = () => {
+    setPaymentId('');
+    setIssuedDate(new Date().toISOString().slice(0, 10));
+    setReceiptTitle('ADVANCE PAYMENT RECEIPT');
+    setPaymentStatusText('ADVANCE PAYMENT RECEIVED');
+    setPaymentMethodOverride('');
+    setReceiptDescription('');
+    setAdditionalCosts([]);
+  };
+
   const handleSubmit = async () => {
     if (!paymentId || isSubmitting) return;
     setIsSubmitting(true);
-    setErrorMessage(null); setSuccessMessage(null);
+    setErrorMessage(null);
+    setSuccessMessage(null);
     
     try {
       const payload = {
         paymentId,
-        description: description.trim() ? description : undefined,
+        title: receiptTitle.trim() ? receiptTitle.trim() : undefined,
+        description: receiptDescription.trim() ? receiptDescription.trim() : undefined,
         newAdditionalCosts: additionalCosts.map(c => ({ description: c.description, amount: parseFloat(c.amount) || 0 }))
       };
 
@@ -93,48 +118,74 @@ export default function ReceiptManager({ project }: any) {
 
       setSuccessMessage(`Receipt ${result.data?.receiptNo || ''} generated successfully!`);
       setIsModalOpen(false);
-      setPaymentId(''); setDescription(''); setAdditionalCosts([]);
+      resetForm();
       await fetchData();
     } catch (err: any) {
       setErrorMessage(err.message || 'An error occurred while generating the receipt');
     } finally { setIsSubmitting(false); }
   };
 
-  // 3. Construct Live Preview Data Object securely using useMemo
+  // 3. Construct Live Preview Data Object securely (Auto-fetching client details)
   const previewReceiptData: any = useMemo(() => {
     const previewItems = [];
     if (selectedPayment) {
       previewItems.push({
         id: 'base',
-        description: description || `Payment for Invoice ${selectedPayment.invoice?.invoiceNo || ''}`,
+        description: receiptDescription || selectedPayment.invoice?.paymentNote || `Payment for Invoice ${selectedPayment.invoice?.invoiceNo || ''}`,
+        quantity: 1,
         amount: baseAmount
       });
     }
     additionalCosts.forEach((c) => {
       if (c.description || parseFloat(c.amount) > 0) {
-        previewItems.push({ id: c.id, description: c.description || 'Additional Cost', amount: parseFloat(c.amount) || 0 });
+        previewItems.push({
+          id: c.id,
+          description: c.description || 'Additional Cost',
+          quantity: 1,
+          amount: parseFloat(c.amount) || 0
+        });
       }
     });
 
     return {
       id: 'preview',
       receiptNo: 'DRAFT-PREVIEW',
-      generatedAt: new Date(),
+      title: receiptTitle || 'ADVANCE PAYMENT RECEIPT',
+      generatedAt: issuedDate ? new Date(issuedDate) : new Date(),
+      issuedDate: issuedDate ? new Date(issuedDate) : new Date(),
       projectId: projectId,
       project: project,
-      payment: selectedPayment,
+      payment: selectedPayment ? {
+        ...selectedPayment,
+        method: paymentMethodOverride || selectedPayment.method || 'Cash Deposit',
+      } : null,
       items: previewItems,
+      // Auto-fetching details directly from the project schema
+      clientName: selectedPayment?.invoice?.participant?.name || project?.clientName || 'N/A',
+      clientCompany: project?.clientCompany || '',
+      clientAddress: project?.clientAddress || project?.country || 'N/A',
+      clientEmail: project?.clientEmail || 'N/A',
+      clientContactNo: project?.clientPhone || 'N/A',
+      paymentStatusText: paymentStatusText || 'ADVANCE PAYMENT RECEIVED',
+      paymentMethod: paymentMethodOverride || selectedPayment?.method || 'Cash Deposit',
+      receiptDescription: receiptDescription || '',
+      discountAmount: 0,
+      taxAmount: 0,
     };
-  }, [selectedPayment, description, baseAmount, additionalCosts, projectId, project]);
+  }, [
+    selectedPayment,
+    receiptTitle,
+    receiptDescription,
+    baseAmount,
+    additionalCosts,
+    projectId,
+    project,
+    issuedDate,
+    paymentStatusText,
+    paymentMethodOverride,
+  ]);
 
   // 4. Debounced State Logic (Anti-Blink Engine)
-  const [debouncedPreviewData, setDebouncedPreviewData] = useState(previewReceiptData);
-  const previewDataRef = useRef(previewReceiptData);
-  
-  useEffect(() => { previewDataRef.current = previewReceiptData; }, [previewReceiptData]);
-
-  const syncPDF = useCallback(() => { setRenderData(previewDataRef.current); }, []);
-
   const [renderData, setRenderData] = useState(previewReceiptData);
 
   useEffect(() => {
@@ -142,7 +193,6 @@ export default function ReceiptManager({ project }: any) {
     return () => clearTimeout(handler);
   }, [previewReceiptData]);
 
-  // Calculate dynamic total for the sidebar UI
   const totalReceiptAmount = previewReceiptData.items.reduce((sum: number, item: any) => sum + item.amount, 0);
 
   if (isLoading) {
@@ -161,9 +211,9 @@ export default function ReceiptManager({ project }: any) {
           <h3 className="text-lg font-bold text-[#1F2933] dark:text-white flex items-center gap-2">
             <FiArchive className="text-[#2A5CAA]" /> Official Payment Receipts
           </h3>
-          <p className="text-[13px] text-[#616E7C] mt-1">Generate immutable proof-of-payment documents and track additional costs.</p>
+          <p className="text-[13px] text-[#616E7C] mt-1">Generate immutable proof-of-payment documents.</p>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="h-10 px-4 inline-flex items-center gap-2 bg-[#2A5CAA] hover:bg-[#2A5CAA]/90 text-white font-bold text-[13px] rounded-lg transition-colors shadow-sm shrink-0">
+        <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="h-10 px-4 inline-flex items-center gap-2 bg-[#2A5CAA] hover:bg-[#2A5CAA]/90 text-white font-bold text-[13px] rounded-lg transition-colors shadow-sm shrink-0">
           <FiFilePlus className="w-4 h-4" /> Generate Receipt
         </button>
       </div>
@@ -202,9 +252,9 @@ export default function ReceiptManager({ project }: any) {
                    return (
                     <tr key={rec.id} className="hover:bg-[#F8FAFC]/50 transition-colors">
                         <td className="px-4 py-3 font-mono font-bold text-[#2A5CAA]">{rec.receiptNo}</td>
-                        <td className="px-4 py-3 font-semibold text-[#1F2933]">{rec.payment?.invoice?.invoiceNo || 'N/A'}</td>
+                        <td className="px-4 py-3 font-semibold text-[#1F2933] dark:text-white">{rec.payment?.invoice?.invoiceNo || 'N/A'}</td>
                         <td className="px-4 py-3 text-[#616E7C]">{rec.payment?.paymentDate ? new Date(rec.payment.paymentDate).toLocaleDateString() : 'N/A'}</td>
-                        <td className="px-4 py-3 text-right font-mono font-bold text-[#1F2933]">LKR {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="px-4 py-3 text-right font-mono font-bold text-[#1F2933] dark:text-white">LKR {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td className="px-4 py-3 text-center">
                           <button onClick={() => window.open(`/api/receipts/${rec.id}/document`, '_blank')} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-[#2A5CAA]/10 text-[#2A5CAA] text-[12px] font-bold hover:bg-[#2A5CAA]/20 transition-colors">
                             <FiFileText className="w-3.5 h-3.5" /> View PDF
@@ -223,7 +273,7 @@ export default function ReceiptManager({ project }: any) {
         <div className="fixed inset-0 z-[100] flex bg-gray-50 overflow-hidden">
           
           {/* LEFT PANEL: Form Controls */}
-          <div className="w-[450px] bg-white border-r border-gray-200 flex flex-col h-full shadow-lg z-10">
+          <div className="w-[480px] bg-white border-r border-gray-200 flex flex-col h-full shadow-lg z-10">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-[#F8FAFC]">
               <div>
                 <h2 className="text-[16px] font-bold text-[#1F2933] flex items-center gap-2"><FiFilePlus className="text-[#2A5CAA]"/> Generate Receipt</h2>
@@ -234,12 +284,13 @@ export default function ReceiptManager({ project }: any) {
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               
+              {/* Payment Link Selection */}
               <div className="space-y-1.5">
                 <label className="text-[12px] font-semibold text-[#616E7C]">Link to Verified Payment <span className="text-red-500">*</span></label>
                 {pendingPayments.length === 0 ? (
                   <p className="text-[12px] text-amber-600 bg-amber-50 p-3 rounded border border-amber-200">No un-receipted verified payments available.</p>
                 ) : (
-                  <select value={paymentId} onChange={(e) => setPaymentId(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-gray-300 text-[13px] focus:outline-none focus:border-[#2A5CAA]">
+                  <select value={paymentId} onChange={(e) => handlePaymentSelect(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-gray-300 text-[13px] focus:outline-none focus:border-[#2A5CAA]">
                     <option value="">-- Select a Verified Payment Target --</option>
                     {pendingPayments.map((p: any) => (
                       <option key={p.id} value={p.id}>
@@ -250,19 +301,88 @@ export default function ReceiptManager({ project }: any) {
                 )}
               </div>
 
+              {/* Date Issued */}
               <div className="space-y-1.5">
-                <label className="text-[12px] font-semibold text-[#616E7C]">Payment Description Override</label>
-                <input type="text" placeholder={`Payment for Invoice ${selectedPayment?.invoice?.invoiceNo || '...'}`} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-gray-300 text-[13px] focus:outline-none focus:border-[#2A5CAA]" />
+                <label className="text-[12px] font-semibold text-[#616E7C]">Date Issued <span className="text-red-500">*</span></label>
+                <input
+                  type="date"
+                  value={issuedDate}
+                  onChange={(e) => setIssuedDate(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-gray-300 text-[13px] focus:outline-none focus:border-[#2A5CAA]"
+                />
+              </div>
+
+              {/* Payment Details Section */}
+              <div className="space-y-3 p-4 bg-gray-50/70 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-2 pb-1 border-b border-gray-200 text-[#1F2933] font-bold text-[12px]">
+                  <FiDollarSign className="text-[#2A5CAA]" /> Payment Details
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-[#616E7C]">Receipt Title</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. ADVANCE PAYMENT RECEIPT"
+                    value={receiptTitle}
+                    onChange={(e) => setReceiptTitle(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-300 bg-white text-[12px] font-bold focus:outline-none focus:border-[#2A5CAA]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-[#616E7C]">Receipt Description / Item</label>
+                  <input
+                    type="text"
+                    placeholder="Advance Payment – Customized POS Solution"
+                    value={receiptDescription}
+                    onChange={(e) => setReceiptDescription(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-300 bg-white text-[12px] focus:outline-none focus:border-[#2A5CAA]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-[#616E7C]">Payment Status Text</label>
+                    <input
+                      type="text"
+                      placeholder="ADVANCE PAYMENT RECEIVED"
+                      value={paymentStatusText}
+                      onChange={(e) => setPaymentStatusText(e.target.value)}
+                      className="w-full h-9 px-3 rounded-lg border border-gray-300 bg-white text-[12px] focus:outline-none focus:border-[#2A5CAA]"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-[#616E7C]">Payment Method</label>
+                    <input
+                      type="text"
+                      placeholder="Cash Deposit / Bank Transfer"
+                      value={paymentMethodOverride}
+                      onChange={(e) => setPaymentMethodOverride(e.target.value)}
+                      className="w-full h-9 px-3 rounded-lg border border-gray-300 bg-white text-[12px] focus:outline-none focus:border-[#2A5CAA]"
+                    />
+                  </div>
+                </div>
+
+                {/* Amount Auto-fill (Read-Only) */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-[11px] font-semibold text-[#616E7C]">Verified Base Amount (Auto-Filled)</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={selectedPayment ? `LKR ${baseAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'LKR 0.00 (Select a Payment)'}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 bg-gray-100 text-[12px] font-mono text-gray-700 cursor-not-allowed"
+                  />
+                </div>
               </div>
 
               {/* Dynamic Additional Costs */}
-              <div className="space-y-3 pt-4 border-t border-gray-100">
+              <div className="space-y-3 pt-2">
                 <div className="flex justify-between items-center">
-                  <label className="text-[12px] font-semibold text-[#616E7C]">Additional Costs (Line Items)</label>
-                  <button onClick={handleAddCost} className="text-[11px] font-bold text-[#2A5CAA] hover:underline flex items-center"><FiPlus /> Add Cost</button>
+                  <label className="text-[12px] font-semibold text-[#616E7C]">Additional Line Items</label>
+                  <button onClick={handleAddCost} className="text-[11px] font-bold text-[#2A5CAA] hover:underline flex items-center gap-1"><FiPlus /> Add Item</button>
                 </div>
                 {additionalCosts.map((cost) => (
-                  <div key={cost.id} className="flex items-center gap-2 bg-gray-50 p-2 rounded border border-gray-200">
+                  <div key={cost.id} className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
                     <input type="text" placeholder="Description (e.g. Extra Fee)" value={cost.description} onChange={e => handleCostChange(cost.id, 'description', e.target.value)} className="flex-1 bg-white border border-gray-300 px-2 py-1.5 rounded text-[12px] focus:outline-none focus:border-[#2A5CAA]" />
                     <input type="number" placeholder="LKR" value={cost.amount} onChange={e => handleCostChange(cost.id, 'amount', e.target.value)} className="w-24 bg-white border border-gray-300 px-2 py-1.5 rounded text-[12px] font-mono focus:outline-none focus:border-[#2A5CAA]" />
                     <button onClick={() => handleRemoveCost(cost.id)} className="text-red-400 hover:text-red-600 p-1"><FiTrash2 /></button>
@@ -274,7 +394,7 @@ export default function ReceiptManager({ project }: any) {
             <div className="p-6 border-t border-gray-200 bg-gray-50">
               <div className="flex justify-between items-center mb-4">
                 <span className="text-[13px] font-bold text-gray-800">Total Received:</span>
-                <span className="text-[18px] font-bold font-mono text-[#2A5CAA]">LKR {totalReceiptAmount.toLocaleString()}</span>
+                <span className="text-[18px] font-bold font-mono text-[#2A5CAA]">LKR {totalReceiptAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <button onClick={handleSubmit} disabled={!paymentId || isSubmitting} className="w-full h-12 flex justify-center items-center gap-2 bg-[#2A5CAA] hover:bg-[#2A5CAA]/90 text-white font-bold text-[14px] rounded-lg transition-colors disabled:opacity-40 shadow-md">
                 {isSubmitting ? <><FiLoader className="animate-spin" /> Locking...</> : <><FiCheckCircle /> Generate Official Receipt</>}
@@ -283,12 +403,12 @@ export default function ReceiptManager({ project }: any) {
           </div>
 
           {/* RIGHT PANEL: Live PDF Preview shielded by Memoized Component */}
-          {/* Note: The inner dark gray backdrop inside the viewer is a native browser feature. We wrap it in a clean bg-gray-100 container. */}
-          <div className="flex-1 bg-gray-100 p-6 sm:p-10 flex flex-col items-center justify-center">
-            <div className="w-full flex justify-between items-center mb-3">
-              <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wider">Live Receipt Preview</h3>
+          <div className="flex-1 bg-gray-500 p-8 flex flex-col">
+            <div className="flex justify-between items-center mb-4 text-white">
+              <h3 className="font-bold text-lg">Live Receipt Preview</h3>
+              <span className="text-xs bg-gray-700 px-2 py-1 rounded">Read-Only View</span>
             </div>
-            <div className="w-full max-w-4xl flex-1 rounded-xl overflow-hidden shadow-2xl border border-gray-200 bg-white">
+            <div className="flex-1 rounded-xl overflow-hidden shadow-2xl bg-white">
               <MemoizedReceiptPreview receiptData={renderData} />
             </div>
           </div>

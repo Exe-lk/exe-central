@@ -53,10 +53,15 @@ import InvoiceTemplate from '@/components/pdf/InvoiceTemplate';
  *       409: { description: Invoice already has a document or Drive folder is missing }
  */
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     if (!isUuid(id)) return jsonError('Valid invoice UUID is required', 400);
+
+    const protocol = request.headers.get('x-forwarded-proto') || 'http';
+    const host = request.headers.get('host');
+    const baseUrl = `${protocol}://${host}`;
+    const logoUrl = `${baseUrl}/Logo.png`;
 
     // 1. Fetch the Base Invoice with Outsourcing Project details
     const invoice = await prisma.invoice.findUnique({
@@ -87,13 +92,34 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       });
     }
 
-    // 3. Attach costs to the payload expected by the InvoiceTemplate
+    // 3. Hydrate Smart Ledger (billingHistory) for Industrial projects
+    let billingHistory: any[] = [];
+    if (invoice.project.type === 'INDUSTRIAL') {
+      const pastInvoices = await prisma.invoice.findMany({
+        where: {
+          projectId: invoice.projectId,
+          status: { not: 'CANCELLED' },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      billingHistory = pastInvoices.map((inv) => ({
+        description: inv.paymentNote || 'Invoice',
+        status: inv.status,
+        date: inv.issuedDate || inv.createdAt,
+        amount: Number(inv.subtotal),
+      }));
+    }
+
+    // 4. Attach costs, billingHistory, and logoUrl to the payload expected by the InvoiceTemplate
     const invoiceDataForPdf = {
       ...invoice,
-      additionalCosts
+      additionalCosts,
+      billingHistory,
+      logoUrl,
     };
 
-    // 4. Render the PDF buffer in-memory
+    // 5. Render the PDF buffer in-memory
     const pdfBuffer = await renderToBuffer(
       React.createElement(InvoiceTemplate, { invoice: invoiceDataForPdf as any }) as any
     );

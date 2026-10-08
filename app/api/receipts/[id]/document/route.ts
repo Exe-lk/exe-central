@@ -76,8 +76,20 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
     if (!receipt) return jsonError('Receipt not found', 404);
 
+    const protocol = _request.headers.get('x-forwarded-proto') || 'http';
+    const host = _request.headers.get('host');
+    const baseUrl = `${protocol}://${host}`;
+    const logoUrl = `${baseUrl}/Logo.png`;
+    const stampUrl = `${baseUrl}/Stamp.png`;
+
+    const receiptDataForPdf = {
+      ...receipt,
+      logoUrl,
+      stampUrl,
+    };
+
     const pdfBuffer = await renderToBuffer(
-      React.createElement(ReceiptTemplate, { receipt: receipt as any }) as any
+      React.createElement(ReceiptTemplate, { receipt: receiptDataForPdf as any }) as any
     );
 
     return new Response(new Uint8Array(pdfBuffer), {

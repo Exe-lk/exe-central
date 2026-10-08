@@ -634,3 +634,44 @@ model ReceiptItem {
 
   @@map("receipt_items")
 }
+
+// ==================================================
+// 5. HR DOCUMENT VAULT & EMPLOYEE MANAGEMENT
+// ==================================================
+
+model Employee {
+  id            String             @id @default(uuid()) @db.Uuid
+  fullName      String             @map("full_name")
+  email         String             @unique
+  position      String             // e.g., "Intern Software Engineer"
+  appointedDate DateTime           @map("appointed_date") @db.Date
+  endDate       DateTime?          @map("end_date") @db.Date
+  status        String             @default("ACTIVE") // ACTIVE, COMPLETED, RESIGNED
+  driveFolderId String?            @map("drive_folder_id") // Dedicated Drive folder for this employee's files
+  
+  // Relations
+  documents     EmployeeDocument[]
+  
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("employees")
+}
+
+model EmployeeDocument {
+  id          String   @id @default(uuid()) @db.Uuid
+  employeeId  String   @map("employee_id") @db.Uuid
+  type        String   // "NDA", "BANK_FORM", "LOI", "SERVICE_LETTER", "OTHER"
+  fileName    String   @map("file_name")
+  mimeType    String   @map("mime_type")
+  driveFileId String   @map("drive_file_id")
+  url         String   // Direct link to view the file on Google Drive
+  
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamptz
+
+  @@index([employeeId])
+  @@map("employee_documents")
+}
+
